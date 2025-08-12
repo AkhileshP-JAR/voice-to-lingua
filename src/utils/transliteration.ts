@@ -135,55 +135,149 @@ export function translateToEnglish(text: string): string {
   
   console.log('Translating to English:', text);
   
-  // Simple Hindi/Hinglish to English translation
-  const translationMap: Record<string, string> = {
+  // First handle complete phrase patterns for better semantic accuracy
+  const phrasePatterns: Record<string, string> = {
+    // Name introductions
+    'mera naam (.+) hai': 'my name is $1',
+    'meraa naam (.+) hai': 'my name is $1',
+    'mera nam (.+) hai': 'my name is $1',
+    'main (.+) hoon': 'I am $1',
+    'main (.+) hun': 'I am $1',
+    
+    // Greetings and common phrases
+    'namaste (.+)': 'hello $1',
     'namaste': 'hello',
+    'aap kaise hain': 'how are you',
+    'aap kaisi hain': 'how are you',
+    'main achha hoon': 'I am good',
+    'main theek hoon': 'I am fine',
     'dhanyawad': 'thank you',
-    'kaise': 'how',
+    
+    // Questions
+    'aapka naam kya hai': 'what is your name',
+    'tumhara naam kya hai': 'what is your name',
+    'yeh kya hai': 'what is this',
+    'woh kya hai': 'what is that',
+    'aap kahan rehte hain': 'where do you live',
+    'aap kya karte hain': 'what do you do',
+    
+    // Basic responses
+    'haan bilkul': 'yes absolutely',
+    'nahin bilkul nahin': 'no not at all',
+    'pata nahin': 'I don\'t know',
+    'samajh gaya': 'I understand',
+    'samajh nahin aaya': 'I don\'t understand',
+  };
+  
+  let result = text.toLowerCase().trim();
+  
+  // Apply phrase-level translations first
+  Object.entries(phrasePatterns).forEach(([pattern, replacement]) => {
+    const regex = new RegExp(pattern, 'gi');
+    result = result.replace(regex, replacement);
+  });
+  
+  // Then handle individual word translations for remaining untranslated words
+  const wordTranslations: Record<string, string> = {
+    // Pronouns and basic words
+    'main': 'I',
+    'mein': 'I',
+    'aap': 'you',
+    'tum': 'you',
+    'hum': 'we',
+    'woh': 'he/she/that',
+    'yeh': 'this',
+    'ye': 'this',
+    
+    // Verbs
+    'hai': 'is',
+    'hain': 'are',
+    'hoon': 'am',
+    'hun': 'am',
+    'tha': 'was',
+    'thi': 'was',
+    'the': 'were',
+    'hoga': 'will be',
+    'hogi': 'will be',
+    'karta': 'do/does',
+    'karti': 'do/does',
+    'karte': 'do',
+    
+    // Question words
     'kya': 'what',
+    'kaun': 'who',
     'kahan': 'where',
     'kab': 'when',
-    'kaun': 'who',
+    'kaise': 'how',
+    'kaisi': 'how',
     'kyon': 'why',
-    'haan': 'yes',
-    'nahin': 'no',
-    'achha': 'good',
-    'bura': 'bad',
-    'bada': 'big',
-    'chota': 'small',
+    'kyun': 'why',
+    'kitna': 'how much',
+    'kitni': 'how much',
+    
+    // Common nouns
+    'naam': 'name',
+    'nam': 'name',
+    'ghar': 'house',
+    'kaam': 'work',
     'paani': 'water',
     'khaana': 'food',
-    'ghar': 'house',
-    'school': 'school',
-    'dost': 'friend',
-    'mata': 'mother',
+    'samay': 'time',
+    'din': 'day',
+    'raat': 'night',
+    'subah': 'morning',
+    'shaam': 'evening',
+    
+    // Family
     'mummy': 'mother',
-    'pita': 'father',
     'papa': 'father',
     'bhai': 'brother',
     'behen': 'sister',
     'didi': 'sister',
-    'aap': 'you',
-    'main': 'I',
-    'hum': 'we',
-    'tum': 'you',
-    'yeh': 'this',
-    'woh': 'that',
-    'hai': 'is',
-    'hoon': 'am',
-    'hain': 'are',
+    'dost': 'friend',
+    
+    // Adjectives
+    'achha': 'good',
+    'accha': 'good',
+    'bura': 'bad',
+    'buraa': 'bad',
+    'bada': 'big',
+    'badaa': 'big',
+    'chota': 'small',
+    'chhota': 'small',
+    'naya': 'new',
+    'purana': 'old',
+    'sundar': 'beautiful',
+    
+    // Common responses
+    'haan': 'yes',
+    'nahin': 'no',
+    'nahi': 'no',
+    'theek': 'okay/fine',
+    'bilkul': 'absolutely',
+    'shayad': 'maybe',
+    'zaroor': 'definitely',
+    
+    // Greetings
     'hello': 'hello',
-    'hi': 'hi',
+    'helo': 'hello',
+    'namaste': 'hello',
+    'alvida': 'goodbye',
+    'phir milenge': 'see you later',
   };
   
-  let result = text.toLowerCase();
-  Object.entries(translationMap).forEach(([hinglish, english]) => {
+  // Apply word-level translations
+  Object.entries(wordTranslations).forEach(([hinglish, english]) => {
     const regex = new RegExp(`\\b${hinglish}\\b`, 'gi');
     result = result.replace(regex, english);
   });
   
-  // Clean up extra spaces
-  result = result.replace(/\s+/g, ' ').trim();
+  // Clean up extra spaces and fix basic grammar
+  result = result
+    .replace(/\s+/g, ' ')
+    .trim()
+    .replace(/^i am (.+)$/, 'I am $1') // Capitalize I
+    .replace(/\bi\b/g, 'I'); // Always capitalize I
   
   console.log('Translation to English result:', result);
   return result;
