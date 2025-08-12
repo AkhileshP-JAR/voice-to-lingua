@@ -54,6 +54,8 @@ const commonHindiWords: Record<string, string> = {
 export function hindiToHinglish(text: string): string {
   if (!text) return '';
   
+  console.log('Converting Hindi to Hinglish:', text);
+  
   // First try to match common words
   let result = text;
   Object.entries(commonHindiWords).forEach(([hindi, hinglish]) => {
@@ -66,11 +68,20 @@ export function hindiToHinglish(text: string): string {
     return hindiToHinglishMap[char] || char;
   }).join('');
   
+  // If no conversion happened and it's still in Devanagari, return the original
+  // This handles cases where the speech recognition might return romanized Hindi
+  if (result === text && /[\u0900-\u097F]/.test(text)) {
+    console.log('No transliteration mapping found, keeping original');
+  }
+  
+  console.log('Hindi to Hinglish result:', result);
   return result;
 }
 
 export function englishToHinglish(text: string): string {
   if (!text) return '';
+  
+  console.log('Converting English to Hinglish:', text);
   
   // Simple phonetic conversion for common English words
   const englishToHinglishMap: Record<string, string> = {
@@ -91,19 +102,38 @@ export function englishToHinglish(text: string): string {
     'father': 'papa',
     'brother': 'bhai',
     'sister': 'didi',
+    'what': 'kya',
+    'where': 'kahan',
+    'when': 'kab',
+    'how': 'kaise',
+    'why': 'kyon',
+    'who': 'kaun',
+    'i am': 'main hoon',
+    'you are': 'aap hain',
+    'this is': 'yeh hai',
+    'that is': 'woh hai',
   };
   
   let result = text.toLowerCase();
   Object.entries(englishToHinglishMap).forEach(([english, hinglish]) => {
-    const regex = new RegExp(`\\b${english}\\b`, 'g');
+    const regex = new RegExp(`\\b${english}\\b`, 'gi');
     result = result.replace(regex, hinglish);
   });
   
+  // If no significant conversion happened, try to keep some English words mixed
+  if (result.toLowerCase() === text.toLowerCase()) {
+    // Add some Hinglish flavor to common English words
+    result = result.replace(/\bthe\b/gi, '').replace(/\s+/g, ' ').trim();
+  }
+  
+  console.log('English to Hinglish result:', result);
   return result;
 }
 
 export function translateToEnglish(text: string): string {
   if (!text) return '';
+  
+  console.log('Translating to English:', text);
   
   // Simple Hindi/Hinglish to English translation
   const translationMap: Record<string, string> = {
@@ -127,20 +157,34 @@ export function translateToEnglish(text: string): string {
     'school': 'school',
     'dost': 'friend',
     'mata': 'mother',
+    'mummy': 'mother',
     'pita': 'father',
+    'papa': 'father',
     'bhai': 'brother',
     'behen': 'sister',
+    'didi': 'sister',
     'aap': 'you',
     'main': 'I',
     'hum': 'we',
     'tum': 'you',
+    'yeh': 'this',
+    'woh': 'that',
+    'hai': 'is',
+    'hoon': 'am',
+    'hain': 'are',
+    'hello': 'hello',
+    'hi': 'hi',
   };
   
   let result = text.toLowerCase();
   Object.entries(translationMap).forEach(([hinglish, english]) => {
-    const regex = new RegExp(`\\b${hinglish}\\b`, 'g');
+    const regex = new RegExp(`\\b${hinglish}\\b`, 'gi');
     result = result.replace(regex, english);
   });
   
+  // Clean up extra spaces
+  result = result.replace(/\s+/g, ' ').trim();
+  
+  console.log('Translation to English result:', result);
   return result;
 }

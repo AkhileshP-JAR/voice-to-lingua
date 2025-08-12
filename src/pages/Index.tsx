@@ -12,16 +12,29 @@ const Index = () => {
   const [isRecording, setIsRecording] = useState(false);
 
   const handleTranscription = (text: string) => {
+    console.log('Original transcribed text:', text);
+    console.log('Text contains Devanagari?', /[\u0900-\u097F]/.test(text));
+    
     setOriginalText(text);
     
     // Generate Hinglish version
-    const hinglish = text.includes('अ') || text.includes('आ') || text.includes('इ') || text.includes('ई') 
-      ? hindiToHinglish(text) 
-      : englishToHinglish(text);
+    let hinglish = '';
+    if (/[\u0900-\u097F]/.test(text)) {
+      // Contains Devanagari script (Hindi)
+      console.log('Processing as Hindi text');
+      hinglish = hindiToHinglish(text);
+    } else {
+      // Treat as English text
+      console.log('Processing as English text');
+      hinglish = englishToHinglish(text);
+    }
+    
+    console.log('Generated Hinglish:', hinglish);
     setHinglishText(hinglish);
     
     // Generate English translation
     const english = translateToEnglish(hinglish);
+    console.log('Generated English:', english);
     setTargetText(english);
   };
 
