@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent } from './ui/card';
-import { Mic, MicOff, Play, Square } from 'lucide-react';
+import { Mic, Square } from 'lucide-react';
 
 interface AudioRecorderProps {
   onTranscription: (text: string) => void;
@@ -15,11 +15,17 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
   setIsRecording 
 }) => {
   const [audioLevel, setAudioLevel] = useState(0);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const recognitionRef = useRef<any>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const animationRef = useRef<number>();
+  const mediaStreamRef = useRef<MediaStream | null>(null);
+  const silenceStartRef = useRef<number | null>(null);
+  const maxRecordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const SILENCE_THRESHOLD = 0.03; // 0..1 normalized level below which we consider silence
+  const SILENCE_DURATION_MS = 2000; // how long silence must persist to auto-stop
+  const MAX_RECORDING_DURATION_MS = 30000; // Maximum 30 seconds recording time
 
   const setupSpeechRecognition = useCallback(() => {
     if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
@@ -50,9 +56,40 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     }
   }, [onTranscription]);
 
+  const stopRecording = useCallback(() => {
+    console.log('Stopping recording...');
+    setIsRecording(false);
+    setAudioLevel(0);
+    silenceStartRef.current = null;
+
+    if (maxRecordingTimerRef.current) {
+      clearTimeout(maxRecordingTimerRef.current);
+      maxRecordingTimerRef.current = null;
+    }
+
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+    }
+
+    if (animationRef.current) {
+      cancelAnimationFrame(animationRef.current);
+    }
+
+    if (audioContextRef.current) {
+      audioContextRef.current.close();
+      audioContextRef.current = null;
+    }
+
+    if (mediaStreamRef.current) {
+      mediaStreamRef.current.getTracks().forEach((t) => t.stop());
+      mediaStreamRef.current = null;
+    }
+  }, [setIsRecording]);
+
   const setupAudioVisualization = useCallback(async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStreamRef.current = stream;
       
       audioContextRef.current = new AudioContext();
       const source = audioContextRef.current.createMediaStreamSource(stream);
@@ -63,11 +100,40 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
 
       const updateAudioLevel = () => {
         if (analyserRef.current && isRecording) {
+          // Use time domain data for better silence detection
           const dataArray = new Uint8Array(analyserRef.current.frequencyBinCount);
-          analyserRef.current.getByteFrequencyData(dataArray);
+          analyserRef.current.getByteTimeDomainData(dataArray);
           
-          const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
-          setAudioLevel(average / 255);
+          // Calculate RMS (Root Mean Square) for better audio level detection
+          let sum = 0;
+          for (let i = 0; i < dataArray.length; i++) {
+            const sample = (dataArray[i] - 128) / 128; // Convert to -1 to 1 range
+            sum += sample * sample;
+          }
+          const rms = Math.sqrt(sum / dataArray.length);
+          const normalized = Math.min(rms * 2, 1); // Scale and clamp to 0-1
+          
+          setAudioLevel(normalized);
+
+          // Debug logging
+          console.log('Audio level (RMS):', normalized.toFixed(3), 'Silence start:', silenceStartRef.current);
+
+          if (normalized < SILENCE_THRESHOLD) {
+            const now = performance.now();
+            if (silenceStartRef.current == null) {
+              silenceStartRef.current = now;
+              console.log('Silence started at:', now);
+            } else if (now - silenceStartRef.current >= SILENCE_DURATION_MS) {
+              console.log('Silence duration reached, stopping recording');
+              stopRecording();
+              return;
+            }
+          } else {
+            if (silenceStartRef.current !== null) {
+              console.log('Audio detected, resetting silence timer');
+            }
+            silenceStartRef.current = null;
+          }
           
           animationRef.current = requestAnimationFrame(updateAudioLevel);
         }
@@ -79,12 +145,20 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
     } catch (error) {
       console.error('Error accessing microphone:', error);
     }
-  }, [isRecording]);
+  }, [isRecording, stopRecording]);
 
   const startRecording = useCallback(async () => {
     try {
+      console.log('Starting recording...');
       setIsRecording(true);
+      silenceStartRef.current = null;
       await setupAudioVisualization();
+      
+      // Set maximum recording time
+      maxRecordingTimerRef.current = setTimeout(() => {
+        console.log('Maximum recording time reached, stopping...');
+        stopRecording();
+      }, MAX_RECORDING_DURATION_MS);
       
       if (recognitionRef.current) {
         recognitionRef.current.start();
@@ -93,24 +167,7 @@ export const AudioRecorder: React.FC<AudioRecorderProps> = ({
       console.error('Error starting recording:', error);
       setIsRecording(false);
     }
-  }, [setupAudioVisualization, setIsRecording]);
-
-  const stopRecording = useCallback(() => {
-    setIsRecording(false);
-    setAudioLevel(0);
-    
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    
-    if (animationRef.current) {
-      cancelAnimationFrame(animationRef.current);
-    }
-    
-    if (audioContextRef.current) {
-      audioContextRef.current.close();
-    }
-  }, [setIsRecording]);
+  }, [setupAudioVisualization, setIsRecording, stopRecording]);
 
   useEffect(() => {
     setupSpeechRecognition();

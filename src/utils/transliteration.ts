@@ -137,12 +137,25 @@ export function translateToEnglish(text: string): string {
   
   // First handle complete phrase patterns for better semantic accuracy
   const phrasePatterns: Record<string, string> = {
+    // Education-specific phrases and common constructions first
+    // e.g., "bachelors ka student" → "a bachelors student"
+    'bachelors?\\s+ka\\s+student': 'a bachelors student',
+
     // Name introductions
-    'mera naam (.+) hai': 'my name is $1',
-    'meraa naam (.+) hai': 'my name is $1',
-    'mera nam (.+) hai': 'my name is $1',
-    'main (.+) hoon': 'I am $1',
-    'main (.+) hun': 'I am $1',
+    // Use a non-greedy, comma-safe capture for the name
+    'mera naam\\s+([^,]+?)\\s+hai': 'my name is $1',
+    'meraa naam\\s+([^,]+?)\\s+hai': 'my name is $1',
+    'mera nam\\s+([^,]+?)\\s+hai': 'my name is $1',
+
+    // Self description variants (main/mai/mein/me)
+    'main\\s+([^,]+?)\\s+hoon': 'I am $1',
+    'main\\s+([^,]+?)\\s+hun': 'I am $1',
+    'mai\\s+([^,]+?)\\s+hoon': 'I am $1',
+    'mai\\s+([^,]+?)\\s+hun': 'I am $1',
+    'mein\\s+([^,]+?)\\s+hoon': 'I am $1',
+    'mein\\s+([^,]+?)\\s+hun': 'I am $1',
+    'me\\s+([^,]+?)\\s+hoon': 'I am $1',
+    'me\\s+([^,]+?)\\s+hun': 'I am $1',
     
     // Greetings and common phrases
     'namaste (.+)': 'hello $1',
@@ -167,6 +180,24 @@ export function translateToEnglish(text: string): string {
     'pata nahin': 'I don\'t know',
     'samajh gaya': 'I understand',
     'samajh nahin aaya': 'I don\'t understand',
+    
+    // Common action patterns
+    'kya kr rhaa hai': 'what are you doing',
+    'kya kar rhaa hai': 'what are you doing',
+    'kya kar raha hai': 'what are you doing',
+    'kya ho rhaa hai': 'what is happening',
+    'kya ho raha hai': 'what is happening',
+    'tujhe ptaa nahin': 'you don\'t know',
+    'tujhe pata nahin': 'you don\'t know',
+    'tujhe pata nahi': 'you don\'t know',
+    'mujhe pata nahin': 'I don\'t know',
+    'mujhe pata nahi': 'I don\'t know',
+    'kya chal rhaa hai': 'what is going on',
+    'kya chal raha hai': 'what is going on',
+    
+    // Specific common phrases
+    'bhai too kya kr rhaa hai': 'brother what are you doing',
+    'tujhe ptaa nahin kya ho rhaa hai': 'you don\'t know what is happening',
   };
   
   let result = text.toLowerCase().trim();
@@ -182,8 +213,11 @@ export function translateToEnglish(text: string): string {
     // Pronouns and basic words
     'main': 'I',
     'mein': 'I',
+    'mai': 'I',
     'aap': 'you',
     'tum': 'you',
+    'too': 'you',
+    'tu': 'you',
     'hum': 'we',
     'woh': 'he/she/that',
     'yeh': 'this',
@@ -202,6 +236,16 @@ export function translateToEnglish(text: string): string {
     'karta': 'do/does',
     'karti': 'do/does',
     'karte': 'do',
+    'kr': 'doing',
+    'kar': 'doing',
+    'rhaa': 'is/are',
+    'raha': 'is/are',
+    'rahi': 'is/are',
+    'rahe': 'are',
+    'ho': 'be',
+    'chal': 'going',
+    'chal rhaa': 'going on',
+    'chal raha': 'going on',
     
     // Question words
     'kya': 'what',
@@ -227,6 +271,8 @@ export function translateToEnglish(text: string): string {
     'raat': 'night',
     'subah': 'morning',
     'shaam': 'evening',
+    'pta': 'know',
+    'pata': 'know',
     
     // Family
     'mummy': 'mother',
@@ -277,7 +323,11 @@ export function translateToEnglish(text: string): string {
     .replace(/\s+/g, ' ')
     .trim()
     .replace(/^i am (.+)$/, 'I am $1') // Capitalize I
-    .replace(/\bi\b/g, 'I'); // Always capitalize I
+    .replace(/\bi\b/g, 'I') // Always capitalize I
+    .replace(/\bwhat is\b/gi, 'what is') // Fix common patterns
+    .replace(/\bwhat are\b/gi, 'what are')
+    .replace(/\byou don't know\b/gi, 'you don\'t know')
+    .replace(/\bwhat is happening\b/gi, 'what is happening');
   
   console.log('Translation to English result:', result);
   return result;
