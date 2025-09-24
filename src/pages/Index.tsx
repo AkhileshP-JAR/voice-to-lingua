@@ -3,13 +3,29 @@ import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptionDisplay } from '@/components/TranscriptionDisplay';
 import { TextToSpeech } from '@/components/TextToSpeech';
 import { hindiToHinglish, englishToHinglish, translateToEnglish } from '@/utils/transliteration';
-import { Languages, Mic } from 'lucide-react';
+import { 
+  Camera, 
+  MessageCircle, 
+  Radio, 
+  FileText, 
+  Monitor, 
+  Captions,
+  Settings,
+  ArrowLeftRight,
+  Mic,
+  Play,
+  X,
+  ChevronLeft
+} from 'lucide-react';
+import { Card } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
 
 const Index = () => {
   const [originalText, setOriginalText] = useState('');
   const [hinglishText, setHinglishText] = useState('');
   const [targetText, setTargetText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
 
   const handleTranscription = (text: string) => {
     console.log('Original transcribed text:', text);
@@ -36,99 +52,208 @@ const Index = () => {
     const english = translateToEnglish(hinglish);
     console.log('Generated English:', english);
     setTargetText(english);
+    
+    // Show translation view
+    setShowTranslation(true);
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      {/* Hero Section */}
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 gradient-primary opacity-10" />
-        <div className="relative container mx-auto px-4 py-16 text-center">
-          <div className="max-w-4xl mx-auto space-y-8">
-            <div className="space-y-4">
-              <div className="flex items-center justify-center gap-3 mb-6">
-                <div className="p-3 rounded-full gradient-primary">
-                  <Languages className="w-8 h-8 text-white" />
-                </div>
-                <h1 className="text-4xl md:text-6xl font-bold bg-gradient-to-r from-primary to-purple-400 bg-clip-text text-transparent">
-                  VoiceScript
-                </h1>
-              </div>
-              <p className="text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                Transform your voice into multiple languages with AI-powered transliteration. 
-                Speak naturally and get instant Hinglish and English conversions.
-              </p>
+  const featureCards = [
+    { icon: Camera, title: "Camera", color: "from-blue-500 to-blue-600" },
+    { icon: MessageCircle, title: "Conversation", color: "from-green-500 to-green-600" },
+    { icon: Radio, title: "Live", color: "from-purple-500 to-purple-600" },
+    { icon: FileText, title: "Document", color: "from-cyan-500 to-cyan-600" },
+  ];
+
+  if (showTranslation && originalText) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setShowTranslation(false)}
+            className="h-10 w-10"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-semibold">Text</h1>
+          <div className="w-10" />
+        </div>
+
+        {/* Language Selector */}
+        <div className="flex items-center justify-center gap-4 p-6">
+          <div className="flex items-center gap-2 bg-secondary rounded-full px-4 py-2">
+            <span className="text-sm font-medium">English</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+          <ArrowLeftRight className="h-5 w-5 text-muted-foreground" />
+          <div className="flex items-center gap-2 bg-secondary rounded-full px-4 py-2">
+            <span className="text-sm font-medium">Hindi</span>
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </div>
+        </div>
+
+        {/* Translation Cards */}
+        <div className="p-4 space-y-4">
+          <Card className="p-6 border-2 border-primary/20">
+            <div className="flex items-start justify-between mb-4">
+              <p className="text-lg leading-relaxed flex-1">{originalText}</p>
+              <Button variant="ghost" size="icon" className="ml-2">
+                <X className="w-5 h-5" />
+              </Button>
+            </div>
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" className="bg-primary/10 hover:bg-primary/20">
+                <Play className="w-5 h-5" />
+              </Button>
+              <Button variant="ghost" size="icon">
+                <Mic className="w-5 h-5" />
+              </Button>
             </div>
             
-            <div className="float-animation">
-              <AudioRecorder 
-                onTranscription={handleTranscription}
-                isRecording={isRecording}
-                setIsRecording={setIsRecording}
-              />
+            <div className="mt-6 pt-6 border-t border-border">
+              <p className="text-lg leading-relaxed text-primary mb-4">
+                {targetText || hinglishText}
+              </p>
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" size="icon" className="bg-primary/10 hover:bg-primary/20">
+                  <Play className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </Button>
+                <Button variant="ghost" size="icon">
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8V4a1 1 0 011-1h4m0 0V1m0 2h2m-6 4v12a1 1 0 001 1h12a1 1 0 001-1V8H4z" />
+                  </svg>
+                </Button>
+              </div>
             </div>
-          </div>
+          </Card>
+        </div>
+
+        {/* Text to Speech Component */}
+        <div className="p-4">
+          <TextToSpeech
+            hinglishText={hinglishText}
+            targetText={targetText}
+            targetLanguage="English"
+          />
         </div>
       </div>
+    );
+  }
 
-      {/* Transcription Results */}
-      {originalText && (
-        <div className="container mx-auto px-4 py-16">
-          <div className="space-y-8">
-            <TranscriptionDisplay
-              originalText={originalText}
-              hinglishText={hinglishText}
-              targetText={targetText}
-              targetLanguage="English"
-            />
-            
-            <div className="flex justify-center">
-              <TextToSpeech
-                hinglishText={hinglishText}
-                targetText={targetText}
-                targetLanguage="English"
-              />
+  return (
+    <div className="min-h-screen bg-background text-foreground">
+      {/* Header */}
+      <div className="flex items-center justify-between p-4">
+        <div className="flex items-center gap-3">
+          <h1 className="text-2xl font-bold">Translate</h1>
+        </div>
+        <Button variant="ghost" size="icon">
+          <Settings className="h-6 w-6" />
+        </Button>
+      </div>
+
+      {/* Subtitle */}
+      <div className="px-4 pb-6">
+        <p className="text-muted-foreground">Communication across languages</p>
+      </div>
+
+      {/* Main Translation Input */}
+      <div className="p-4">
+        <Card className="border-2 border-primary/20 min-h-[200px]">
+          <div className="p-6">
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center gap-2 bg-secondary rounded-full px-3 py-1">
+                  <span className="text-sm font-medium">EN</span>
+                  <ArrowLeftRight className="h-3 w-3" />
+                  <span className="text-sm font-medium">HI</span>
+                </div>
+                <Button variant="ghost" size="icon" className="h-12 w-12 rounded-full bg-primary/10 hover:bg-primary/20">
+                  <Mic className="h-6 w-6" />
+                </Button>
+              </div>
+              
+              {!originalText ? (
+                <div className="min-h-[120px] flex items-center">
+                  <p className="text-muted-foreground text-lg">Enter text to translate</p>
+                </div>
+              ) : (
+                <div className="min-h-[120px]">
+                  <TranscriptionDisplay
+                    originalText={originalText}
+                    hinglishText={hinglishText}
+                    targetText={targetText}
+                    targetLanguage="English"
+                  />
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      )}
+        </Card>
+      </div>
 
-      {/* Features Section */}
-      <div className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
-          <h2 className="text-3xl font-bold text-center mb-12">How it Works</h2>
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full gradient-primary flex items-center justify-center">
-                <Mic className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold">Record</h3>
-              <p className="text-muted-foreground">
-                Click the microphone and speak in Hindi, English, or any supported language
-              </p>
+      {/* Recording Component */}
+      <div className="p-4">
+        <AudioRecorder 
+          onTranscription={handleTranscription}
+          isRecording={isRecording}
+          setIsRecording={setIsRecording}
+        />
+      </div>
+
+      {/* Feature Cards */}
+      <div className="p-4 space-y-4">
+        <div className="grid grid-cols-2 gap-4">
+          {featureCards.map((feature, index) => {
+            const Icon = feature.icon;
+            return (
+              <Card key={index} className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer">
+                <div className="flex items-center gap-3">
+                  <div className={`p-3 rounded-full bg-gradient-to-r ${feature.color}`}>
+                    <Icon className="h-6 w-6 text-white" />
+                  </div>
+                  <span className="font-medium">{feature.title}</span>
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+
+        {/* Additional Features */}
+        <Card className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-full bg-gradient-to-r from-gray-500 to-gray-600">
+              <Monitor className="h-6 w-6 text-white" />
             </div>
-            
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full gradient-secondary flex items-center justify-center">
-                <Languages className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold">Transform</h3>
-              <p className="text-muted-foreground">
-                AI instantly converts your speech to Hinglish and target language
-              </p>
-            </div>
-            
-            <div className="text-center space-y-4">
-              <div className="w-16 h-16 mx-auto rounded-full gradient-accent flex items-center justify-center">
-                <Languages className="w-8 h-8 text-white" />
-              </div>
-              <h3 className="text-xl font-semibold">Listen</h3>
-              <p className="text-muted-foreground">
-                Play back the converted text in natural-sounding voices
-              </p>
+            <div>
+              <h3 className="font-medium">Screen</h3>
+              <p className="text-sm text-muted-foreground">Browse pages in your native language as screen content is translated in real time.</p>
             </div>
           </div>
-        </div>
+        </Card>
+
+        <Card className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer">
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-full bg-gradient-to-r from-indigo-500 to-indigo-600">
+              <Captions className="h-6 w-6 text-white" />
+            </div>
+            <div>
+              <h3 className="font-medium">Live captions</h3>
+              <p className="text-sm text-muted-foreground">Attend meetings and watch videos with real-time bilingual captions.</p>
+            </div>
+          </div>
+        </Card>
       </div>
     </div>
   );
