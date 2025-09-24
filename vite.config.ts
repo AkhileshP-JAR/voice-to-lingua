@@ -12,8 +12,8 @@ export default defineConfig(({ mode }) => {
   return {
     server: {
       host: "::",
-      port: 8083,
-      https: enableHttps,
+      port: 8080,
+      ...(enableHttps && { https: {} }),
     },
     plugins: [
       react(),
