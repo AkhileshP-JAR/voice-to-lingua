@@ -3,6 +3,7 @@ import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptionDisplay } from '@/components/TranscriptionDisplay';
 import { TextToSpeech } from '@/components/TextToSpeech';
 import { hindiToHinglish, englishToHinglish, translateToEnglish } from '@/utils/transliteration';
+import { useAI4BharatTransliteration } from '@/hooks/useAI4BharatTransliteration';
 import { 
   Camera, 
   MessageCircle, 
@@ -26,34 +27,42 @@ const Index = () => {
   const [targetText, setTargetText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
+  const { transliterate, isLoading: isTransliterating } = useAI4BharatTransliteration();
 
-  const handleTranscription = (text: string) => {
-    console.log('Original transcribed text:', text);
-    console.log('Text contains Devanagari?', /[\u0900-\u097F]/.test(text));
-    
+  const handleTranscription = async (text: string) => {
+    console.log('Received transcription:', text);
     setOriginalText(text);
     
-    // Generate Hinglish version
-    let hinglish = '';
-    if (/[\u0900-\u097F]/.test(text)) {
-      // Contains Devanagari script (Hindi)
-      console.log('Processing as Hindi text');
-      hinglish = hindiToHinglish(text);
+    // Detect if the text contains Hindi characters (Devanagari script)
+    const containsHindi = /[\u0900-\u097F]/.test(text);
+    
+    let hinglishResult = '';
+    let englishResult = '';
+    
+    if (containsHindi) {
+      // Use AI4Bharat for Hindi to Hinglish transliteration
+      const ai4bharatResult = await transliterate({
+        text,
+        sourceLanguage: 'hi',
+        targetLanguage: 'en'
+      });
+      
+      if (ai4bharatResult) {
+        hinglishResult = ai4bharatResult.transliteratedText;
+        englishResult = translateToEnglish(hinglishResult);
+      } else {
+        // Fallback to local transliteration
+        hinglishResult = hindiToHinglish(text);
+        englishResult = translateToEnglish(hinglishResult);
+      }
     } else {
-      // Treat as English text
-      console.log('Processing as English text');
-      hinglish = englishToHinglish(text);
+      // For English text, use local functions
+      hinglishResult = englishToHinglish(text);
+      englishResult = translateToEnglish(text);
     }
     
-    console.log('Generated Hinglish:', hinglish);
-    setHinglishText(hinglish);
-    
-    // Generate English translation
-    const english = translateToEnglish(hinglish);
-    console.log('Generated English:', english);
-    setTargetText(english);
-    
-    // Show translation view
+    setHinglishText(hinglishResult);
+    setTargetText(englishResult);
     setShowTranslation(true);
   };
 
