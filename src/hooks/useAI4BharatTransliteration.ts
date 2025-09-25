@@ -3,15 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 
 interface TransliterationRequest {
   text: string;
-  sourceLanguage?: string;
-  targetLanguage?: string;
 }
 
 interface TransliterationResponse {
   transliteratedText: string;
   originalText: string;
-  sourceLanguage: string;
-  targetLanguage: string;
 }
 
 export const useAI4BharatTransliteration = () => {
@@ -19,9 +15,7 @@ export const useAI4BharatTransliteration = () => {
   const [error, setError] = useState<string | null>(null);
 
   const transliterate = async ({
-    text,
-    sourceLanguage = 'hi',
-    targetLanguage = 'en'
+    text
   }: TransliterationRequest): Promise<TransliterationResponse | null> => {
     if (!text.trim()) {
       setError('No text provided');
@@ -37,8 +31,6 @@ export const useAI4BharatTransliteration = () => {
         {
           body: {
             text: text.trim(),
-            sourceLanguage,
-            targetLanguage,
           },
         }
       );

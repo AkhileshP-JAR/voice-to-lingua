@@ -13,15 +13,15 @@ serve(async (req) => {
   }
 
   try {
-    const { text, sourceLanguage, targetLanguage } = await req.json();
+    const { text } = await req.json();
 
     if (!text) {
       throw new Error('No text provided');
     }
 
-    console.log('AI4Bharat transliteration request:', { text, sourceLanguage, targetLanguage });
+    console.log('AI4Bharat transliteration request:', { text });
 
-    // AI4Bharat transliteration API call
+    // AI4Bharat IndicTransliterate API call
     const response = await fetch('https://api.ai4bharat.org/transliterate', {
       method: 'POST',
       headers: {
@@ -30,9 +30,10 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         input: text,
-        source_language: sourceLanguage || 'hi',
-        target_language: targetLanguage || 'en',
-        model_task: 'transliteration',
+        source_language: "hi",
+        target_language: "hi_Latn",
+        context: "generic",
+        topk: 1,
       }),
     });
 
@@ -51,9 +52,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({ 
         transliteratedText,
-        originalText: text,
-        sourceLanguage: sourceLanguage || 'hi',
-        targetLanguage: targetLanguage || 'en'
+        originalText: text
       }),
       {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

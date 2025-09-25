@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptionDisplay } from '@/components/TranscriptionDisplay';
 import { TextToSpeech } from '@/components/TextToSpeech';
-import { hindiToHinglish, englishToHinglish, translateToEnglish } from '@/utils/transliteration';
+import { translateToEnglish } from '@/utils/transliteration';
 import { useAI4BharatTransliteration } from '@/hooks/useAI4BharatTransliteration';
 import { 
   Camera, 
@@ -33,32 +33,20 @@ const Index = () => {
     console.log('Received transcription:', text);
     setOriginalText(text);
     
-    // Detect if the text contains Hindi characters (Devanagari script)
-    const containsHindi = /[\u0900-\u097F]/.test(text);
+    // Use AI4Bharat IndicTransliterate API for all text
+    const ai4bharatResult = await transliterate({ text });
     
     let hinglishResult = '';
     let englishResult = '';
     
-    if (containsHindi) {
-      // Use AI4Bharat for Hindi to Hinglish transliteration
-      const ai4bharatResult = await transliterate({
-        text,
-        sourceLanguage: 'hi',
-        targetLanguage: 'en'
-      });
-      
-      if (ai4bharatResult) {
-        hinglishResult = ai4bharatResult.transliteratedText;
-        englishResult = translateToEnglish(hinglishResult);
-      } else {
-        // Fallback to local transliteration
-        hinglishResult = hindiToHinglish(text);
-        englishResult = translateToEnglish(hinglishResult);
-      }
+    if (ai4bharatResult) {
+      hinglishResult = ai4bharatResult.transliteratedText;
+      englishResult = translateToEnglish(hinglishResult);
     } else {
-      // For English text, use local functions
-      hinglishResult = englishToHinglish(text);
-      englishResult = translateToEnglish(text);
+      // If API fails, show error or original text
+      console.error('AI4Bharat transliteration failed');
+      hinglishResult = text;
+      englishResult = text;
     }
     
     setHinglishText(hinglishResult);
