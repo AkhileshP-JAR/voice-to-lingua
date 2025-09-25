@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptionDisplay } from '@/components/TranscriptionDisplay';
 import { TextToSpeech } from '@/components/TextToSpeech';
-import { translateToEnglish } from '@/utils/transliteration';
-import { useAI4BharatTransliteration } from '@/hooks/useAI4BharatTransliteration';
+import { useAI4BharatTranslation } from '@/hooks/useAI4BharatTranslation';
 import { 
   Camera, 
   MessageCircle, 
@@ -27,24 +26,24 @@ const Index = () => {
   const [targetText, setTargetText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
-  const { transliterate, isLoading: isTransliterating } = useAI4BharatTransliteration();
+  const { translateHindiToEnglish, isLoading: isTranslating } = useAI4BharatTranslation();
 
   const handleTranscription = async (text: string) => {
     console.log('Received transcription:', text);
     setOriginalText(text);
     
-    // Use AI4Bharat IndicTransliterate API for all text
-    const ai4bharatResult = await transliterate({ text });
+    // Use AI4Bharat chained API: Hindi → Hinglish → English
+    const translationResult = await translateHindiToEnglish({ text });
     
     let hinglishResult = '';
     let englishResult = '';
     
-    if (ai4bharatResult) {
-      hinglishResult = ai4bharatResult.transliteratedText;
-      englishResult = translateToEnglish(hinglishResult);
+    if (translationResult) {
+      hinglishResult = translationResult.hinglishText;
+      englishResult = translationResult.englishText;
     } else {
       // If API fails, show error or original text
-      console.error('AI4Bharat transliteration failed');
+      console.error('AI4Bharat translation failed');
       hinglishResult = text;
       englishResult = text;
     }
