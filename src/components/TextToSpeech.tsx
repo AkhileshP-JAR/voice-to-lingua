@@ -18,18 +18,42 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({
   const [isPlayingTarget, setIsPlayingTarget] = useState(false);
 
   const speak = useCallback((text: string, lang: string, setPlaying: (playing: boolean) => void) => {
+    if (!text?.trim()) return;
     if ('speechSynthesis' in window) {
       // Stop any ongoing speech
       window.speechSynthesis.cancel();
-      
+
+      const getBestVoice = (l: string): SpeechSynthesisVoice | null => {
+        const voices = window.speechSynthesis.getVoices();
+        const exact = voices.find(v => v.lang?.toLowerCase() === l.toLowerCase());
+        if (exact) return exact;
+        // Prefer Indian English for Hinglish, then general English
+        if (l.startsWith('en')) {
+          return (
+            voices.find(v => v.lang?.startsWith('en-IN')) ||
+            voices.find(v => v.lang?.startsWith('en-GB')) ||
+            voices.find(v => v.lang?.startsWith('en-US')) ||
+            voices.find(v => v.lang?.startsWith('en')) ||
+            null
+          );
+        }
+        return voices.find(v => v.lang?.startsWith(l.split('-')[0])) || null;
+      };
+
       // Wait a bit for the cancel to take effect
       setTimeout(() => {
         const utterance = new SpeechSynthesisUtterance(text);
         utterance.lang = lang;
-        utterance.rate = 0.8;
+        utterance.rate = lang.startsWith('en-IN') ? 0.9 : 0.95;
         utterance.pitch = 1;
         utterance.volume = 1;
-        
+
+        const assignVoiceAndSpeak = () => {
+          const voice = getBestVoice(lang);
+          if (voice) utterance.voice = voice;
+          window.speechSynthesis.speak(utterance);
+        };
+
         utterance.onstart = () => {
           console.log('Speech started');
           setPlaying(true);
@@ -42,14 +66,14 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({
           console.error('Speech error:', error);
           setPlaying(false);
         };
-        
+
         // Ensure voices are loaded before speaking
         if (window.speechSynthesis.getVoices().length === 0) {
           window.speechSynthesis.addEventListener('voiceschanged', () => {
-            window.speechSynthesis.speak(utterance);
+            assignVoiceAndSpeak();
           }, { once: true });
         } else {
-          window.speechSynthesis.speak(utterance);
+          assignVoiceAndSpeak();
         }
       }, 100);
     } else {

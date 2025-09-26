@@ -18,120 +18,92 @@ Deno.serve(async (req) => {
 
     console.log('AI4Bharat translation request:', { text });
 
-    // Step 1: Transliterate Hindi to Hinglish using IndicTransliterate
-    const transliterateResponse = await fetch('https://api.ai4bharat.org/transliterate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('AI4BHARAT_API_KEY')}`,
-      },
-      body: JSON.stringify({
-        input: text,
-        source_language: "hi",
-        target_language: "hi_Latn",
-        context: "generic",
-        topk: 1,
-      }),
-    });
+    // Use IndicTrans2 for both translations to avoid the failing transliterate endpoint
+    const apiKey = Deno.env.get('AI4BHARAT_API_KEY') || '';
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+      ...(apiKey ? { 'Authorization': `Bearer ${apiKey}` } : {}),
+    };
 
-    if (!transliterateResponse.ok) {
-      const errorText = await transliterateResponse.text();
-      console.error('IndicTransliterate API error:', errorText);
-      throw new Error(`IndicTransliterate API error: ${transliterateResponse.status} - ${errorText}`);
-    }
+    const endpoint = 'https://indictrans2-api.ai4bharat.org/translate';
 
-    const transliterateResult = await transliterateResponse.json();
-    console.log('IndicTransliterate response:', transliterateResult);
+    const bodyHiToEn = {
+      input: [text],
+      source_language: 'hi',
+      target_language: 'en',
+      domain: 'general',
+    };
 
-    // Extract transliterated text
-    const hinglishText = transliterateResult.output || transliterateResult.transliterated_text || text;
-    
-    // Step 2: Use a simpler translation approach - try the dhruva platform API
-    let englishText = hinglishText; // fallback to hinglish if translation fails
-    
-    try {
-      // Try alternative API endpoint for translation
-      const translateResponse = await fetch('https://dhruva-api.bhashini.gov.in/services/inference/pipeline', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${Deno.env.get('AI4BHARAT_API_KEY')}`,
-        },
-        body: JSON.stringify({
-          "pipelineTasks": [
-            {
-              "taskType": "translation",
-              "config": {
-                "language": {
-                  "sourceLanguage": "hi",
-                  "targetLanguage": "en"
-                }
+    const bodyHiToLatin = {
+      input: [text],
+      source_language: 'hi',
+      target_language: 'hi_Latn',
+      domain: 'general',
+    };
+
+    const safeExtract = (obj: any): string | null => {
+      try {
+        if (!obj) return null;
+        const tryKeys = (o: any): string | null => {
+          const keys = ['output', 'target', 'translated_text', 'translation', 'text'];
+          for (const k of keys) {
+            const v = o?.[k];
+            if (typeof v === 'string') return v;
+            if (Array.isArray(v) && typeof v[0] === 'string') return v[0];
+            if (Array.isArray(v) && v[0] && typeof v[0] === 'object') {
+              for (const kk of ['target', 'translated_text', 'translation', 'text']) {
+                if (typeof v[0][kk] === 'string') return v[0][kk];
               }
             }
-          ],
-          "inputData": {
-            "input": [
-              {
-                "source": text
-              }
-            ]
           }
-        }),
-      });
-
-      if (translateResponse.ok) {
-        const translateResult = await translateResponse.json();
-        console.log('Dhruva translation response:', translateResult);
-        
-        if (translateResult?.pipelineResponse?.[0]?.output?.[0]?.target) {
-          englishText = translateResult.pipelineResponse[0].output[0].target;
+          return null;
+        };
+        if (typeof obj === 'string') return obj;
+        const direct = tryKeys(obj);
+        if (direct) return direct;
+        if (obj && typeof obj === 'object') {
+          for (const key of Object.keys(obj)) {
+            const candidate = tryKeys(obj[key]);
+            if (candidate) return candidate;
+          }
         }
-      } else {
-        console.log('Dhruva API not available, using basic translation');
-      }
-    } catch (error) {
-      console.log('Translation API failed, using basic translation:', error);
-      
-      // Basic word-by-word translation as fallback
-      const basicTranslations: { [key: string]: string } = {
-        'hello': 'hello',
-        'helo': 'hello', 
-        'hallo': 'hello',
-        'main': 'I',
-        'mera': 'my',
-        'naam': 'name',
-        'name': 'name',
-        'hai': 'is',
-        'hain': 'are',
-        'aur': 'and',
-        'tum': 'you',
-        'tumhara': 'your',
-        'kya': 'what',
-        'kaise': 'how',
-        'kahan': 'where',
-        'kyun': 'why',
-        'akhilesh': 'Akhilesh',
-        'akash': 'Akash',
-        'rahul': 'Rahul',
-        'priya': 'Priya',
-        'sharma': 'Sharma',
-        'kumar': 'Kumar'
-      };
-      
-      englishText = hinglishText.toLowerCase()
-        .split(/\s+/)
-        .map((word: string) => {
-          const cleanWord = word.replace(/[^\w]/g, '');
-          return basicTranslations[cleanWord] || word;
-        })
-        .join(' ');
-      
-      // Capitalize first letter
-      englishText = englishText.charAt(0).toUpperCase() + englishText.slice(1);
+      } catch (_e) {}
+      return null;
+    };
+
+    // Perform both translations in parallel for speed
+    const [enRes, latnRes] = await Promise.all([
+      fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(bodyHiToEn) }),
+      fetch(endpoint, { method: 'POST', headers, body: JSON.stringify(bodyHiToLatin) }),
+    ]);
+
+    let englishText = '';
+    let hinglishText = '';
+
+    if (!enRes.ok) {
+      const errText = await enRes.text();
+      console.error('IndicTrans2 hi->en API error:', enRes.status, errText);
+    } else {
+      const enJson = await enRes.json();
+      console.log('IndicTrans2 hi->en response:', enJson);
+      englishText = safeExtract(enJson) || '';
+    }
+
+    if (!latnRes.ok) {
+      const errText = await latnRes.text();
+      console.error('IndicTrans2 hi->hi_Latn API error:', latnRes.status, errText);
+    } else {
+      const latnJson = await latnRes.json();
+      console.log('IndicTrans2 hi->hi_Latn response:', latnJson);
+      hinglishText = safeExtract(latnJson) || '';
+    }
+
+    if (!englishText && !hinglishText) {
+      throw new Error('Translation failed: no outputs returned');
     }
 
     return new Response(
-      JSON.stringify({ 
+      JSON.stringify({
         originalText: text,
         hinglishText,
         englishText,

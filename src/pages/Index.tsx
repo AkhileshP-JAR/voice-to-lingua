@@ -42,10 +42,10 @@ const Index = () => {
       hinglishResult = translationResult.hinglishText;
       englishResult = translationResult.englishText;
     } else {
-      // If API fails, show error or original text
+      // If API fails, do not substitute with original Hindi (avoids TTS issues)
       console.error('AI4Bharat translation failed');
-      hinglishResult = text;
-      englishResult = text;
+      hinglishResult = '';
+      englishResult = '';
     }
     
     setHinglishText(hinglishResult);
@@ -114,7 +114,7 @@ const Index = () => {
             
             <div className="mt-6 pt-6 border-t border-border">
               <p className="text-lg leading-relaxed text-primary mb-4">
-                {targetText || hinglishText}
+                {targetText || hinglishText || 'Translation unavailable.'}
               </p>
               <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" className="bg-primary/10 hover:bg-primary/20">
