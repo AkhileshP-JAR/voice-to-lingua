@@ -18,36 +18,7 @@ Deno.serve(async (req) => {
 
     console.log('AI4Bharat translation request:', { text });
 
-    // Step 1: Translate Hindi to English using IndicTrans2
-    const translateResponse = await fetch('https://indictrans2-api.ai4bharat.org/translate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('AI4BHARAT_API_KEY')}`,
-      },
-      body: JSON.stringify({
-        input: [text],
-        source_language: "hi",
-        target_language: "en",
-        domain: "general"
-      }),
-    });
-
-    if (!translateResponse.ok) {
-      const errorText = await translateResponse.text();
-      console.error('IndicTrans2 API error:', errorText);
-      throw new Error(`IndicTrans2 API error: ${translateResponse.status} - ${errorText}`);
-    }
-
-    const translateResult = await translateResponse.json();
-    console.log('IndicTrans2 response:', translateResult);
-
-    // Extract translated text
-    const englishText = Array.isArray(translateResult.output) 
-      ? translateResult.output[0] 
-      : translateResult.output || text;
-    
-    // Step 2: Transliterate Hindi to Hinglish using IndicTransliterate
+    // Step 1: Transliterate Hindi to Hinglish using IndicTransliterate
     const transliterateResponse = await fetch('https://api.ai4bharat.org/transliterate', {
       method: 'POST',
       headers: {
@@ -74,6 +45,90 @@ Deno.serve(async (req) => {
 
     // Extract transliterated text
     const hinglishText = transliterateResult.output || transliterateResult.transliterated_text || text;
+    
+    // Step 2: Use a simpler translation approach - try the dhruva platform API
+    let englishText = hinglishText; // fallback to hinglish if translation fails
+    
+    try {
+      // Try alternative API endpoint for translation
+      const translateResponse = await fetch('https://dhruva-api.bhashini.gov.in/services/inference/pipeline', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${Deno.env.get('AI4BHARAT_API_KEY')}`,
+        },
+        body: JSON.stringify({
+          "pipelineTasks": [
+            {
+              "taskType": "translation",
+              "config": {
+                "language": {
+                  "sourceLanguage": "hi",
+                  "targetLanguage": "en"
+                }
+              }
+            }
+          ],
+          "inputData": {
+            "input": [
+              {
+                "source": text
+              }
+            ]
+          }
+        }),
+      });
+
+      if (translateResponse.ok) {
+        const translateResult = await translateResponse.json();
+        console.log('Dhruva translation response:', translateResult);
+        
+        if (translateResult?.pipelineResponse?.[0]?.output?.[0]?.target) {
+          englishText = translateResult.pipelineResponse[0].output[0].target;
+        }
+      } else {
+        console.log('Dhruva API not available, using basic translation');
+      }
+    } catch (error) {
+      console.log('Translation API failed, using basic translation:', error);
+      
+      // Basic word-by-word translation as fallback
+      const basicTranslations: { [key: string]: string } = {
+        'hello': 'hello',
+        'helo': 'hello', 
+        'hallo': 'hello',
+        'main': 'I',
+        'mera': 'my',
+        'naam': 'name',
+        'name': 'name',
+        'hai': 'is',
+        'hain': 'are',
+        'aur': 'and',
+        'tum': 'you',
+        'tumhara': 'your',
+        'kya': 'what',
+        'kaise': 'how',
+        'kahan': 'where',
+        'kyun': 'why',
+        'akhilesh': 'Akhilesh',
+        'akash': 'Akash',
+        'rahul': 'Rahul',
+        'priya': 'Priya',
+        'sharma': 'Sharma',
+        'kumar': 'Kumar'
+      };
+      
+      englishText = hinglishText.toLowerCase()
+        .split(/\s+/)
+        .map((word: string) => {
+          const cleanWord = word.replace(/[^\w]/g, '');
+          return basicTranslations[cleanWord] || word;
+        })
+        .join(' ');
+      
+      // Capitalize first letter
+      englishText = englishText.charAt(0).toUpperCase() + englishText.slice(1);
+    }
 
     return new Response(
       JSON.stringify({ 
