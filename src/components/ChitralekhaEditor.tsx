@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Badge } from './ui/badge';
 import { useChitralekha } from '@/hooks/useChitralekha';
-import { Languages, Volume2, Edit3, Play, Pause, Download } from 'lucide-react';
+import { Languages, Volume2, CreditCard as Edit3, Play, Pause, Download } from 'lucide-react';
 
 interface ChitralekhaEditorProps {
   initialText?: string;
