@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
+import { useChitralekha } from '@/hooks/useChitralekha';
 import { Play, Square, Volume2 } from 'lucide-react';
 
 interface TextToSpeechProps {
@@ -16,6 +17,7 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({
 }) => {
   const [isPlayingHinglish, setIsPlayingHinglish] = useState(false);
   const [isPlayingTarget, setIsPlayingTarget] = useState(false);
+  const { generateVoiceover, isGeneratingVoiceover } = useChitralekha();
 
   const speak = useCallback((text: string, lang: string, setPlaying: (playing: boolean) => void) => {
     if (!text?.trim()) return;
@@ -81,6 +83,38 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({
     }
   }, []);
 
+  const speakWithChitralekha = useCallback(async (text: string, lang: string, setPlaying: (playing: boolean) => void) => {
+    if (!text?.trim()) return;
+    
+    setPlaying(true);
+    
+    try {
+      const result = await generateVoiceover({
+        text,
+        language: lang,
+        voice: 'default',
+        speed: 1.0,
+        pitch: 1.0,
+      });
+
+      if (result && result.audioUrl) {
+        const audio = new Audio(result.audioUrl);
+        audio.onended = () => setPlaying(false);
+        audio.onerror = () => {
+          console.warn('Chitralekha audio failed, falling back to browser TTS');
+          speak(text, lang, setPlaying);
+        };
+        await audio.play();
+      } else {
+        // Fallback to browser TTS
+        speak(text, lang, setPlaying);
+      }
+    } catch (error) {
+      console.warn('Chitralekha TTS failed, falling back to browser TTS:', error);
+      speak(text, lang, setPlaying);
+    }
+  }, [generateVoiceover, speak]);
+
   const stopSpeaking = useCallback(() => {
     window.speechSynthesis.cancel();
     setIsPlayingHinglish(false);
@@ -106,13 +140,19 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({
                 if (isPlayingHinglish) {
                   stopSpeaking();
                 } else {
-                  speak(hinglishText, 'en-IN', setIsPlayingHinglish);
+                  speakWithChitralekha(hinglishText, 'hi_Latn', setIsPlayingHinglish);
                 }
               }}
-              variant={isPlayingHinglish ? "recording" : "gradient"}
+              variant={isPlayingHinglish || isGeneratingVoiceover ? "recording" : "gradient"}
+              disabled={isGeneratingVoiceover}
               className="w-full"
             >
-              {isPlayingHinglish ? (
+              {isGeneratingVoiceover ? (
+                <>
+                  <Square className="w-4 h-4 mr-2" />
+                  Generating...
+                </>
+              ) : isPlayingHinglish ? (
                 <>
                   <Square className="w-4 h-4 mr-2" />
                   Stop
@@ -135,13 +175,19 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({
                 if (isPlayingTarget) {
                   stopSpeaking();
                 } else {
-                  speak(targetText, 'en-US', setIsPlayingTarget);
+                  speakWithChitralekha(targetText, 'en', setIsPlayingTarget);
                 }
               }}
-              variant={isPlayingTarget ? "recording" : "gradient"}
+              variant={isPlayingTarget || isGeneratingVoiceover ? "recording" : "gradient"}
+              disabled={isGeneratingVoiceover}
               className="w-full"
             >
-              {isPlayingTarget ? (
+              {isGeneratingVoiceover ? (
+                <>
+                  <Square className="w-4 h-4 mr-2" />
+                  Generating...
+                </>
+              ) : isPlayingTarget ? (
                 <>
                   <Square className="w-4 h-4 mr-2" />
                   Stop

@@ -5,3 +5,9 @@ net = ["api.ai4bharat.org", "indictrans2-api.ai4bharat.org"]
 
 [[functions.ai4bharat-transliterate]]
 net = ["api.ai4bharat.org", "indictrans2-api.ai4bharat.org"]
+
+[[functions.chitralekha-transliterate]]
+net = ["api.ai4bharat.org"]
+
+[[functions.chitralekha-voiceover]]
+net = ["api.ai4bharat.org"]

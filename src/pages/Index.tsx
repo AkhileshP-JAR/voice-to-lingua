@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AudioRecorder } from '@/components/AudioRecorder';
 import { TranscriptionDisplay } from '@/components/TranscriptionDisplay';
 import { TextToSpeech } from '@/components/TextToSpeech';
+import { ChitralekhaEditor } from '@/components/ChitralekhaEditor';
 import { useAI4BharatTranslation } from '@/hooks/useAI4BharatTranslation';
 import { 
   Camera, 
@@ -26,6 +27,7 @@ const Index = () => {
   const [targetText, setTargetText] = useState('');
   const [isRecording, setIsRecording] = useState(false);
   const [showTranslation, setShowTranslation] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
   const { translateHindiToEnglish, isLoading: isTranslating } = useAI4BharatTranslation();
 
   const handleTranscription = async (text: string) => {
@@ -53,12 +55,46 @@ const Index = () => {
     setShowTranslation(true);
   };
 
+  const handleShowEditor = () => {
+    setShowEditor(true);
+  };
+
   const featureCards = [
     { icon: Camera, title: "Camera", color: "from-blue-500 to-blue-600" },
     { icon: MessageCircle, title: "Conversation", color: "from-green-500 to-green-600" },
     { icon: Radio, title: "Live", color: "from-purple-500 to-purple-600" },
     { icon: FileText, title: "Document", color: "from-cyan-500 to-cyan-600" },
   ];
+
+  if (showEditor) {
+    return (
+      <div className="min-h-screen bg-background text-foreground">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4 border-b border-border">
+          <Button 
+            variant="ghost" 
+            size="icon"
+            onClick={() => setShowEditor(false)}
+            className="h-10 w-10"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <h1 className="text-lg font-semibold">Chitralekha Editor</h1>
+          <div className="w-10" />
+        </div>
+
+        {/* Chitralekha Editor */}
+        <div className="p-4">
+          <ChitralekhaEditor
+            initialText={originalText}
+            sourceLanguage="hi"
+            onTextChange={(text) => setOriginalText(text)}
+            onTransliterationChange={(transliterated) => setHinglishText(transliterated)}
+          />
+        </div>
+      </div>
+    );
+  }
 
   if (showTranslation && originalText) {
     return (
@@ -119,6 +155,11 @@ const Index = () => {
               <div className="flex items-center gap-4">
                 <Button variant="ghost" size="icon" className="bg-primary/10 hover:bg-primary/20">
                   <Play className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon" onClick={handleShowEditor}>
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
                 </Button>
                 <Button variant="ghost" size="icon">
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -247,6 +288,23 @@ const Index = () => {
             <div>
               <h3 className="font-medium">Live captions</h3>
               <p className="text-sm text-muted-foreground">Attend meetings and watch videos with real-time bilingual captions.</p>
+            </div>
+          </div>
+        </Card>
+
+        <Card 
+          className="p-6 hover:shadow-lg transition-all duration-200 cursor-pointer"
+          onClick={handleShowEditor}
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-full bg-gradient-to-r from-purple-500 to-purple-600">
+              <svg className="h-6 w-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="font-medium">Chitralekha Editor</h3>
+              <p className="text-sm text-muted-foreground">Advanced transliteration and voice-over editing with AI4Bharat Chitralekha.</p>
             </div>
           </div>
         </Card>
