@@ -18,7 +18,36 @@ Deno.serve(async (req) => {
 
     console.log('AI4Bharat translation request:', { text });
 
-    // Step 1: Transliterate Hindi to Hinglish using IndicTransliterate
+    // Step 1: Translate Hindi to English using IndicTrans2
+    const translateResponse = await fetch('https://indictrans2-api.ai4bharat.org/translate', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${Deno.env.get('AI4BHARAT_API_KEY')}`,
+      },
+      body: JSON.stringify({
+        input: [text],
+        source_language: "hi",
+        target_language: "en",
+        domain: "general"
+      }),
+    });
+
+    if (!translateResponse.ok) {
+      const errorText = await translateResponse.text();
+      console.error('IndicTrans2 API error:', errorText);
+      throw new Error(`IndicTrans2 API error: ${translateResponse.status} - ${errorText}`);
+    }
+
+    const translateResult = await translateResponse.json();
+    console.log('IndicTrans2 response:', translateResult);
+
+    // Extract translated text
+    const englishText = Array.isArray(translateResult.output) 
+      ? translateResult.output[0] 
+      : translateResult.output || text;
+    
+    // Step 2: Transliterate Hindi to Hinglish using IndicTransliterate
     const transliterateResponse = await fetch('https://api.ai4bharat.org/transliterate', {
       method: 'POST',
       headers: {
@@ -45,35 +74,6 @@ Deno.serve(async (req) => {
 
     // Extract transliterated text
     const hinglishText = transliterateResult.output || transliterateResult.transliterated_text || text;
-    
-    // Step 2: Translate Hinglish to English using IndicTrans2
-    const translateResponse = await fetch('https://indictrans2-api.ai4bharat.org/translate', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${Deno.env.get('AI4BHARAT_API_KEY')}`,
-      },
-      body: JSON.stringify({
-        input: [hinglishText],
-        source_language: "hi_Latn",
-        target_language: "en",
-        domain: "general"
-      }),
-    });
-
-    if (!translateResponse.ok) {
-      const errorText = await translateResponse.text();
-      console.error('IndicTrans2 API error:', errorText);
-      throw new Error(`IndicTrans2 API error: ${translateResponse.status} - ${errorText}`);
-    }
-
-    const translateResult = await translateResponse.json();
-    console.log('IndicTrans2 response:', translateResult);
-
-    // Extract translated text
-    const englishText = Array.isArray(translateResult.output) 
-      ? translateResult.output[0] 
-      : translateResult.output || hinglishText;
 
     return new Response(
       JSON.stringify({ 

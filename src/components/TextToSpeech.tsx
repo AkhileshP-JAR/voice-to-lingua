@@ -22,16 +22,38 @@ export const TextToSpeech: React.FC<TextToSpeechProps> = ({
       // Stop any ongoing speech
       window.speechSynthesis.cancel();
       
-      const utterance = new SpeechSynthesisUtterance(text);
-      utterance.lang = lang;
-      utterance.rate = 0.8;
-      utterance.pitch = 1;
-      
-      utterance.onstart = () => setPlaying(true);
-      utterance.onend = () => setPlaying(false);
-      utterance.onerror = () => setPlaying(false);
-      
-      window.speechSynthesis.speak(utterance);
+      // Wait a bit for the cancel to take effect
+      setTimeout(() => {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        utterance.rate = 0.8;
+        utterance.pitch = 1;
+        utterance.volume = 1;
+        
+        utterance.onstart = () => {
+          console.log('Speech started');
+          setPlaying(true);
+        };
+        utterance.onend = () => {
+          console.log('Speech ended');
+          setPlaying(false);
+        };
+        utterance.onerror = (error) => {
+          console.error('Speech error:', error);
+          setPlaying(false);
+        };
+        
+        // Ensure voices are loaded before speaking
+        if (window.speechSynthesis.getVoices().length === 0) {
+          window.speechSynthesis.addEventListener('voiceschanged', () => {
+            window.speechSynthesis.speak(utterance);
+          }, { once: true });
+        } else {
+          window.speechSynthesis.speak(utterance);
+        }
+      }, 100);
+    } else {
+      console.error('Speech synthesis not supported');
     }
   }, []);
 
